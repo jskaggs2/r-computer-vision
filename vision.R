@@ -6,8 +6,6 @@
 library(tesseract)
 library(magick)
 
-t.start <- Sys.time()
-
 
 # Convert video to images -------------------------------------------------
 
@@ -26,12 +24,14 @@ lapply(cmd_fps, system)
 # Convert video to frames, assume 30 fps
 fps <- 30
 cmd_frames <- sprintf("ffmpeg -i %s -r %s %s",
-                      paste0(path, "/", vids), "30", paste0(path, "/", vids, "_frame_%04d.png"))
+                      paste0(path, "/", vids), fps, paste0(path, "/", vids, "_frame_%04d.png"))
 lapply(cmd_frames, system)
 
 
 # Get data from images ----------------------------------------------------
 
+
+t.start <- Sys.time()
 
 # Specify expected characters and pattern in date, time, and location
 engine_time <- tesseract(options = list(
@@ -76,14 +76,19 @@ for(frame in frames){
     image_convert(type = "Bilevel") %>%
     image_negate() %>%
     image_morphology("Close", "Square:1") %>%
-    image_morphology("Erode", "Octagon:1") %>%
-    image_median(radius = 6) %>%
+    image_morphology("Erode", "Octagon:2") %>%
+    image_median(radius = 9) %>%
     tesseract::ocr(engine = engine_time)
-  
+
   # Extract location
   loc <- input %>%
-    image_crop("290x15+110+417") %>%
+    image_crop("288x15+112+417") %>%
+    image_scale(1000) %>%
     image_convert(type = "Grayscale") %>%
+    image_negate() %>%
+    image_threshold(type = "white", threshold = "30%") %>%
+    image_morphology("Erode", "Square:1") %>%
+    image_median(radius = 3) %>%
     image_enhance() %>%
     tesseract::ocr(engine = engine_loc)
   
